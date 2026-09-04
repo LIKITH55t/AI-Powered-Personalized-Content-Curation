@@ -31,7 +31,11 @@
         border: 0;
       }
       button { background: #e8c36a; font-weight: 700; cursor: pointer; }
-      .hint { font-size: 11px; color: #c8c3b4; margin-top: 8px; }
+      .modes { display: flex; gap: 8px; margin-top: 8px; }
+      .modes .mode { margin-top: 0; background: #10121c; border: 1px solid #ffffff22; color: #f4f1ea; }
+      .modes       .mode.active { background: #5eead4; color: #062e26; }
+      .status { font-size: 11px; color: #5eead4; margin-top: 10px; }
+      .hint { font-size: 11px; color: #c8c3b4; margin-top: 6px; }
     </style>
   </head>
   <body>
@@ -43,8 +47,13 @@
         <option value="skills">Skill Learning</option>
       </select>
       <textarea id="prompt">Show DSA and interview prep. Hide memes and celebrity posts.</textarea>
+      <div class="modes" id="modes">
+        <button type="button" class="mode" data-mode="dim">Dim</button>
+        <button type="button" class="mode" data-mode="collapse">Collapse</button>
+      </div>
       <button id="save">Apply intent</button>
-      <div class="hint">Scores posts marked with data-orion-post against the FastAPI engine.</div>
+      <div class="status" id="status">Checking active tab…</div>
+      <div class="hint">Scores live X (Twitter) tweets and demo posts against the FastAPI engine.</div>
     </div>
     <script src="popup.js"></script>
   </body>

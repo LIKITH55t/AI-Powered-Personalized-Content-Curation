@@ -21,6 +21,7 @@ from engine import (
     rank_feed,
     save_store,
 )
+from llm import llm_enabled, parse_intent_smart
 
 app = FastAPI(title="ORION Goal-Based Feed", version="1.0.0")
 app.add_middleware(
@@ -35,6 +36,7 @@ app.add_middleware(
 class IntentBody(BaseModel):
     prompt: str = ""
     goal: str = "placements"
+    useLlm: bool | None = None
 
 
 class FeedbackBody(BaseModel):
@@ -76,7 +78,7 @@ def goals() -> dict[str, Any]:
 
 @app.post("/api/intent")
 def intent(body: IntentBody) -> dict[str, Any]:
-    parsed = parse_intent(body.prompt, body.goal)
+    parsed = _resolve_intent(body.prompt, body.goal, forced=body.useLlm)
     store = load_store()
     store["profile"]["goal"] = parsed["goal"]
     store["profile"]["prompt"] = body.prompt
@@ -84,6 +86,15 @@ def intent(body: IntentBody) -> dict[str, Any]:
     store["history"] = store["history"][-30:]
     save_store(store)
     return parsed
+
+
+def _resolve_intent(prompt: str, goal: str, forced: bool | None = None) -> dict[str, Any]:
+    """Use the LLM when enabled (unless the client forces it off) and return true intent."""
+    if forced is False:
+        return parse_intent(prompt, goal)
+    if llm_enabled() or forced is True:
+        return parse_intent_smart(prompt, goal)
+    return parse_intent(prompt, goal)
 
 
 @app.get("/api/profile")
@@ -111,7 +122,7 @@ def feed(goal: str | None = None, prompt: str | None = None) -> dict[str, Any]:
     profile = store["profile"]
     goal_key = goal or profile.get("goal") or "placements"
     user_prompt = prompt if prompt is not None else profile.get("prompt") or ""
-    intent = parse_intent(user_prompt, goal_key)
+    intent = _resolve_intent(user_prompt, goal_key)
     ranked = rank_feed(load_posts(), intent, store.get("weights") or {})
     return {
         "intent": intent,
@@ -136,7 +147,7 @@ def feedback(body: FeedbackBody) -> dict[str, Any]:
     if not post:
         raise HTTPException(status_code=404, detail="Unknown post")
     apply_feedback(store, post, body.action)
-    intent = parse_intent(store["profile"].get("prompt") or "", store["profile"].get("goal") or "placements")
+    intent = _resolve_intent(store["profile"].get("prompt") or "", store["profile"].get("goal") or "placements")
     ranked = rank_feed(load_posts(), intent, store.get("weights") or {})
     return {"ok": True, "analytics": analytics(store, ranked), "items": ranked}
 
@@ -144,7 +155,7 @@ def feedback(body: FeedbackBody) -> dict[str, Any]:
 @app.get("/api/insights")
 def insights() -> dict[str, Any]:
     store = load_store()
-    intent = parse_intent(store["profile"].get("prompt") or "", store["profile"].get("goal") or "placements")
+    intent = _resolve_intent(store["profile"].get("prompt") or "", store["profile"].get("goal") or "placements")
     ranked = rank_feed(load_posts(), intent, store.get("weights") or {})
     by_platform: dict[str, dict[str, int]] = {}
     for item in ranked:

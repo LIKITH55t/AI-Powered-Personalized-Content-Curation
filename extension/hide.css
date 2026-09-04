@@ -1,17 +1,39 @@
+/* Dim mode: faded, desaturated, non-interactive — content still visible. */
 .orion-hidden {
   opacity: 0.22 !important;
   filter: grayscale(1);
   pointer-events: none;
 }
 
+/* Collapse mode: fully removed from layout. */
+.orion-hidden[hidden] {
+  display: none !important;
+}
+
+/* Score badge on every judged post. */
 .orion-badge {
   position: absolute;
   top: 8px;
   right: 8px;
   z-index: 20;
-  font: 600 11px system-ui, sans-serif;
-  padding: 4px 8px;
+  font: 700 11px system-ui, sans-serif;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
   border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.orion-good {
+  background: #5eead4;
+  color: #062e26;
+}
+
+.orion-mid {
   background: #e8c36a;
-  color: #07080f;
+  color: #3a2c05;
+}
+
+.orion-bad {
+  background: #fb7185;
+  color: #3a0c14;
 }

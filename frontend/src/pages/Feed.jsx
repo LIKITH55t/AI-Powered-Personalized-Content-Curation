@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import PostCard from "../components/PostCard";
 import { api } from "../lib/api";
+
+const BATCH = 10;
 
 const GOALS = [
   { id: "placements", label: "Placements" },
@@ -16,12 +18,14 @@ export default function Feed() {
   const [items, setItems] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [showHidden, setShowHidden] = useState(false);
+  const [batches, setBatches] = useState(1);
   const [busy, setBusy] = useState(true);
   const [note, setNote] = useState("");
 
   async function load(nextGoal = goal, nextPrompt = prompt) {
     setBusy(true);
     setNote("Scoring batch of 10…");
+    setBatches(1);
     try {
       const q = new URLSearchParams({ goal: nextGoal, prompt: nextPrompt });
       const data = await api(`/api/feed?${q.toString()}`);
@@ -70,7 +74,10 @@ export default function Feed() {
 
   const visible = items.filter((p) => p.visible);
   const hidden = items.filter((p) => !p.visible);
-  const shown = useMemo(() => (showHidden ? items : visible), [showHidden, items, visible]);
+  const order = useMemo(() => (showHidden ? items : visible), [showHidden, items, visible]);
+  const shown = order.slice(0, batches * BATCH);
+  const totalBatches = Math.ceil(order.length / BATCH);
+  const hasMore = batches < totalBatches;
 
   return (
     <div className="px-5 py-8 md:px-10">
@@ -124,7 +131,17 @@ export default function Feed() {
       </form>
 
       {intent && (
-        <div className="mt-5 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          {intent.source && (
+            <span
+              className={`rounded-full px-3 py-1 text-xs ${
+                intent.source === "llm" ? "bg-violet-500/15 text-violet-300" : "bg-white/5 text-mist/60"
+              }`}
+              title={intent.llmError || "Intent parsed by the deterministic local engine"}
+            >
+              LLM · {intent.source}
+            </span>
+          )}
           {intent.interests?.slice(0, 6).map((t) => (
             <span key={t} className="rounded-full bg-teal/10 px-3 py-1 text-xs text-teal">
               + {t}
@@ -150,6 +167,27 @@ export default function Feed() {
           <PostCard key={item.id} item={item} dimmed={!item.visible} onAction={onAction} />
         ))}
       </div>
+
+      {order.length > 0 && (
+        <div className="mt-8 text-center">
+          <div className="mb-3 text-xs text-mist/50">
+            Showing {shown.length} of {order.length} ranked items · batch {batches} of {totalBatches || 1}
+          </div>
+          {hasMore && !busy && (
+            <button
+              onClick={() => setBatches((b) => b + 1)}
+              className="inline-flex items-center gap-2 rounded-full border border-gold/40 bg-gold/10 px-5 py-2.5 text-sm font-semibold text-gold hover:bg-gold/20"
+            >
+              <Plus size={16} /> Load next batch of {Math.min(BATCH, order.length - batches * BATCH)}
+            </button>
+          )}
+          {busy && (
+            <span className="inline-flex items-center gap-2 text-sm text-gold">
+              <Loader2 size={16} className="animate-spin" /> Scoring…
+            </span>
+          )}
+        </div>
+      )}
 
       {!showHidden && hidden.length > 0 && (
         <p className="mt-8 text-center text-sm text-mist/50">

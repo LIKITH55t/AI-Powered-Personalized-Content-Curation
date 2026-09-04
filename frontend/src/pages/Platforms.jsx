@@ -6,8 +6,8 @@ const PLATFORMS = [
   },
   {
     name: "X (Twitter)",
-    status: "Demo corpus live",
-    note: "Natural-language criteria applied to posts in batches of 10.",
+    status: "Live in the extension",
+    note: "A DOM adapter tags real tweets and scores them against your active intent in real time across the scrolling feed.",
   },
   {
     name: "Reddit",

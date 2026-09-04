@@ -49,7 +49,10 @@ STOPWORDS = {
     "want", "need", "please", "just", "some", "any", "about", "into",
 }
 
-EXCLUDE_CUES = ("no ", "not ", "without ", "except ", "exclude ", "don't want ", "dont want ", "skip ")
+EXCLUDE_CUES = (
+    "no ", "not ", "without ", "except ", "exclude ",
+    "don't want ", "dont want ", "skip ", "hide ", "suppress ", "block ",
+)
 
 
 def load_posts() -> list[dict[str, Any]]:
@@ -140,6 +143,13 @@ def parse_intent(prompt: str, goal: str) -> dict[str, Any]:
     }
 
 
+def _count(haystack: str, phrases: list[str]) -> int:
+    """Number of distinct phrases present in the haystack (as substrings)."""
+    if not phrases:
+        return 0
+    return sum(1 for p in phrases if p.lower() in haystack)
+
+
 def _overlap(haystack: str, phrases: list[str]) -> float:
     if not phrases:
         return 0.0
@@ -162,42 +172,53 @@ def score_post(post: dict[str, Any], intent: dict[str, Any], weights: dict[str, 
     goal = intent.get("goal") or "placements"
     profile = GOAL_PROFILES.get(goal, GOAL_PROFILES["placements"])
 
-    goal_score = _overlap(blob, profile["include"])
-    interest_score = _overlap(blob, interests)
-    exclude_hit = _overlap(blob, exclusions + profile["exclude"])
-
+    # Signal 1: how many goal vocabulary terms the post touches.
+    goal_hits = _count(blob, profile["include"])
+    # Signal 2: how many explicit user interests match.
+    interest_hits = _count(blob, interests)
+    # Signal 3: token-level overlap with the interest vocabulary.
     tokens = set(tokenize(blob))
     interest_tokens = set()
     for phrase in interests:
         interest_tokens.update(tokenize(phrase))
     token_hit = len(tokens & interest_tokens) / max(len(interest_tokens), 1)
+    # Penalty: excluded themes present.
+    exclude_hits = _count(blob, exclusions + profile["exclude"])
 
     personal = 0.0
     for tag in post.get("tags") or []:
         personal += weights.get(tag, 0.0)
     personal = max(-0.25, min(0.25, personal / 4))
 
-    quality = 0.08 if post.get("type") in {"video", "article", "thread"} else 0.0
+    # Saturated signals: any goal hit is meaningful, more hits push higher.
+    goal_sig = min(1.0, goal_hits / 3.0)
+    inter_sig = min(1.0, interest_hits / 1.5)
+    token_sig = min(1.0, token_hit)
+    quality = 0.06 if post.get("type") in {"video", "article", "thread"} else 0.0
 
-    raw = (
-        0.34 * goal_score
-        + 0.32 * interest_score
-        + 0.18 * token_hit
-        + 0.08 * quality
+    relevance = (
+        0.44 * goal_sig
+        + 0.32 * inter_sig
+        + 0.18 * token_sig
+        + 0.06 * quality
         + personal
-        - 0.72 * exclude_hit
     )
-    score = int(max(0, min(100, round(50 + raw * 80))))
+    penalty = min(0.85, exclude_hits) * 0.5
 
-    if exclude_hit >= 0.15 and score > 38:
+    # The -0.26 baseline makes zero-signal (off-intent but not offensive) posts
+    # land below the visibility threshold instead of clumping around 50.
+    raw = relevance - penalty - 0.26
+    score = int(max(0, min(100, round(50 + raw * 72))))
+
+    if exclude_hits and score > 38:
         score = min(score, 34)
 
     reasons = []
-    if goal_score > 0:
+    if goal_hits:
         reasons.append(f"Aligns with {profile['label']}")
-    if interest_score > 0:
+    if interest_hits:
         reasons.append("Matches stated interests")
-    if exclude_hit > 0:
+    if exclude_hits:
         reasons.append("Contains excluded themes")
     if personal > 0.04:
         reasons.append("Boosted by your saves/likes")
@@ -213,9 +234,9 @@ def score_post(post: dict[str, Any], intent: dict[str, Any], weights: dict[str, 
         "visible": visible,
         "reasons": reasons[:3],
         "signals": {
-            "goalFit": round(goal_score, 3),
-            "interestFit": round(interest_score, 3),
-            "excludeRisk": round(exclude_hit, 3),
+            "goalFit": round(goal_sig, 3),
+            "interestFit": round(inter_sig, 3),
+            "excludeRisk": round(exclude_hits, 3),
             "personalization": round(personal, 3),
         },
     }

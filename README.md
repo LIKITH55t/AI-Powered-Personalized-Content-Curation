@@ -47,11 +47,31 @@ Python · FastAPI · React · Vite · Tailwind CSS · Chrome Extension (MV3)
 
 ## Scoring
 
-The scoring engine is transparent and deterministic, using:
+The scoring engine is transparent and deterministic. Post scores are built from saturating
+count-based signals (not diluted hit-fractions), so they spread across the range instead of
+clumping around a baseline:
 
-* Goal overlap
-* Interest overlap
-* Exclusions
-* Feedback weights
+* **Goal fit** — how many terms of the active goal's vocabulary the post touches
+* **Interest fit** — how many explicitly-stated interests match
+* **Token overlap** — token-level intersection with the interest vocabulary
+* **Exclusions** — strong negative penalty for excluded themes
+* **Feedback weights** — likes/saves boost, skips/hides suppress
 
-An LLM can be integrated later through `/api/intent` without changing the UI.
+Posts with zero signal land below the visibility threshold rather than sitting at ~50, so
+off-intent content is actually suppressed.
+
+An LLM can be integrated behind `/api/intent` without changing the UI. Enable it with any
+OpenAI-compatible endpoint:
+
+```bash
+# OpenAI
+set ORION_LLM_API_KEY=sk-...        # PowerShell
+# or set the base URL + model for OpenRouter / Groq / local Ollama
+set ORION_LLM_BASE_URL=https://api.openai.com/v1
+set ORION_LLM_MODEL=gpt-4o-mini
+```
+
+When enabled, `/api/intent` (and `/api/feed`) parse intent with the LLM and fall back to the
+deterministic engine on any error, so the feed never breaks. `llm.py` adds no pip dependencies.
+
+> Python 3.14: `pydantic>=2.11` is required (2.10.x has no prebuilt wheel and builds pydantic-core from source, which needs the MSVC linker).
