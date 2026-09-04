@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <style>
+      body {
+        margin: 0;
+        width: 320px;
+        font-family: system-ui, sans-serif;
+        background: #07080f;
+        color: #f4f1ea;
+      }
+      .wrap { padding: 16px; }
+      .brand { letter-spacing: 0.2em; color: #e8c36a; font-size: 12px; font-weight: 700; }
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 90px;
+        margin-top: 10px;
+        border-radius: 12px;
+        border: 1px solid #ffffff22;
+        background: #10121c;
+        color: inherit;
+        padding: 10px;
+      }
+      select, button {
+        width: 100%;
+        margin-top: 8px;
+        border-radius: 999px;
+        padding: 10px;
+        border: 0;
+      }
+      button { background: #e8c36a; font-weight: 700; cursor: pointer; }
+      .hint { font-size: 11px; color: #c8c3b4; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="brand">ORION</div>
+      <select id="goal">
+        <option value="placements">Placements</option>
+        <option value="exams">Competitive Exams</option>
+        <option value="skills">Skill Learning</option>
+      </select>
+      <textarea id="prompt">Show DSA and interview prep. Hide memes and celebrity posts.</textarea>
+      <button id="save">Apply intent</button>
+      <div class="hint">Scores posts marked with data-orion-post against the FastAPI engine.</div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+</html>

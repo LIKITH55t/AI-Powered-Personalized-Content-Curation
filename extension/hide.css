@@ -1,0 +1,17 @@
+.orion-hidden {
+  opacity: 0.22 !important;
+  filter: grayscale(1);
+  pointer-events: none;
+}
+
+.orion-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 20;
+  font: 600 11px system-ui, sans-serif;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e8c36a;
+  color: #07080f;
+}
