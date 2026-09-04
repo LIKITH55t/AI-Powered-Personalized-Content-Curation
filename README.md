@@ -1,7 +1,5 @@
 # AI-Powered Personalized Content Curation
 
-**Team Orion · Smart India Hackathon Prototype**
-
 A goal-shaped social feed that uses natural-language intent to personalize content and filter out off-topic posts.
 
 ## What it does
