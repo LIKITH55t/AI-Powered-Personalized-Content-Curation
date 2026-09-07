@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import HistoryPanel from "../components/HistoryPanel";
 
 export default function Insights() {
   const [data, setData] = useState(null);
@@ -89,6 +90,8 @@ export default function Insights() {
           ))}
         </div>
       </div>
+
+      <HistoryPanel />
     </div>
   );
 }
