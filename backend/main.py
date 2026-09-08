@@ -18,6 +18,7 @@ from engine import (
     load_posts,
     load_store,
     parse_intent,
+    quick_stats,
     rank_feed,
     save_store,
 )
@@ -167,3 +168,52 @@ def insights() -> dict[str, Any]:
         "platforms": by_platform,
         "history": store.get("history") or [],
     }
+
+
+@app.get("/api/history")
+def history() -> dict[str, Any]:
+    """Return prompt history annotated with live per-entry feed statistics.
+
+    Each entry in ``store.history`` contains only {prompt, goal} — no wall-clock
+    timestamp is recorded.  The ``stats`` block is therefore computed *live* using
+    the current content corpus and the current personalization weights.  These
+    numbers reflect what the feed would look like *right now* if that intent were
+    replayed, not what the feed actually showed at the time the intent was first set.
+
+    Entries are returned newest-first; the ordinal label ("Most recent", "2nd most
+    recent", …) expresses recency without fabricating timestamps.
+    """
+    store = load_store()
+    posts = load_posts()
+    weights = store.get("weights") or {}
+    raw_history: list[dict[str, Any]] = store.get("history") or []
+
+    # Reverse so newest entry is first; preserve original index for ordinal label.
+    entries = []
+    for ordinal, entry in enumerate(reversed(raw_history), start=1):
+        prompt = entry.get("prompt") or ""
+        goal = entry.get("goal") or "placements"
+        intent = parse_intent(prompt, goal)
+        stats = quick_stats(posts, intent, weights)
+        if ordinal == 1:
+            label = "Most recent"
+        elif ordinal == 2:
+            label = "2nd most recent"
+        elif ordinal == 3:
+            label = "3rd most recent"
+        else:
+            label = f"{ordinal}th most recent"
+        entries.append({
+            "ordinal": ordinal,
+            "label": label,
+            "prompt": prompt,
+            "goal": goal,
+            "goalLabel": GOAL_PROFILES.get(goal, GOAL_PROFILES["placements"])["label"],
+            "stats": stats,
+            "stats_note": (
+                "Live calculation against the current corpus and current weights. "
+                "Not a historical snapshot — the original feed state is not stored."
+            ),
+        })
+
+    return {"entries": entries, "total": len(entries)}

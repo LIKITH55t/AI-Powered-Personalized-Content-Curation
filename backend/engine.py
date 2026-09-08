@@ -290,3 +290,24 @@ def percentile(values: list[int], p: float) -> int:
     values = sorted(values)
     idx = min(len(values) - 1, max(0, math.ceil(p * len(values)) - 1))
     return values[idx]
+
+
+def quick_stats(posts: list[dict[str, Any]], intent: dict[str, Any], weights: dict[str, float]) -> dict[str, Any]:
+    """Return lightweight feed statistics for a given intent without full analytics overhead.
+
+    These statistics are calculated *live* against the current corpus and current
+    personalization weights.  They are NOT historical snapshots of what the feed
+    looked like when the intent was originally submitted — the store records only
+    {prompt, goal} per history entry, so true point-in-time metrics are unavailable.
+    """
+    scored = rank_feed(posts, intent, weights)
+    shown = [p for p in scored if p["visible"]]
+    hidden = [p for p in scored if not p["visible"]]
+    avg = int(sum(p["score"] for p in shown) / max(len(shown), 1)) if shown else 0
+    total = max(len(scored), 1)
+    return {
+        "shown": len(shown),
+        "hidden": len(hidden),
+        "avgScore": avg,
+        "suppressionRate": round(len(hidden) / total, 3),
+    }
