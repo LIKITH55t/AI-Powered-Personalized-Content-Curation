@@ -42,14 +42,36 @@
     const tone = item.score >= 75 ? "orion-good" : item.score >= 48 ? "orion-mid" : "orion-bad";
     badge.classList.remove("orion-good", "orion-mid", "orion-bad");
     badge.classList.add(tone);
-    badge.textContent = item.visible ? String(item.score) : `⊘ ${item.score}`;
+    badge.textContent = item.visible ? String(item.score) : `\u2298 ${item.score}`;
 
     if (mode === "collapse" && !item.visible) el.setAttribute("hidden", "");
     else el.removeAttribute("hidden");
   }
 
+  // Track backend availability to avoid spamming failed fetch calls.
+  let backendAvailable = true;
+  let backendRetryTimer = null;
+
+  function scheduleBackendRetry() {
+    if (backendRetryTimer) return;
+    backendRetryTimer = setTimeout(async () => {
+      backendRetryTimer = null;
+      try {
+        const res = await fetch(`${API}/api/health`, { method: "GET" });
+        if (res.ok) {
+          backendAvailable = true;
+          console.debug("[ORION] Backend is back online.");
+        }
+      } catch {
+        // Still offline — will retry on the next trigger.
+      }
+    }, 15000);
+  }
+
   async function score(nodes, goal, prompt, mode) {
     if (!nodes.length) return;
+    // Skip silently when the backend is known to be offline.
+    if (!backendAvailable) return;
     const posts = nodes.map(toPost);
     try {
       const res = await fetch(`${API}/api/score`, {
@@ -64,13 +86,16 @@
         if (el) applyResult(el, item, mode);
       }
     } catch (err) {
-      console.warn("ORION score failed", err);
+      // console.debug (not warn) so Chrome does NOT surface this as a red
+      // error in chrome://extensions when the local backend is simply offline.
+      console.debug("[ORION] Backend unavailable, scoring paused.", err?.message);
+      backendAvailable = false;
+      scheduleBackendRetry();
     }
   }
 
   let timer = null;
 
-  // Rescore in two passes so every [data-orion-post] node gets a score.
   function rescore(goal, prompt, mode, force) {
     const nodes = collectNodes().filter((n) => force || !n.dataset.orionScored);
     if (!nodes.length) return;
@@ -88,7 +113,6 @@
       rescore(goal, prompt, mode, true);
 
       const mo = new MutationObserver(() => {
-        // only bother if genuinely new (unscored) post nodes appeared
         const needs = collectNodes().filter(
           (n) => !n.dataset.orionScored || n.getAttribute("hidden") || n.classList.contains("orion-hidden")
         );
@@ -102,6 +126,8 @@
 
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg?.type === "ORION_RESCORE") {
+      // New intent applied from popup — reset backend flag so scoring retries.
+      backendAvailable = true;
       getSettings((goal, prompt, mode) => {
         rescore(msg.goal || goal, msg.prompt !== undefined ? msg.prompt : prompt, msg.mode || mode, true);
       });
