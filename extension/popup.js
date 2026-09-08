@@ -63,3 +63,81 @@ document.getElementById("save").addEventListener("click", async () => {
   }
   window.close();
 });
+
+// Load and render prompt history from backend API
+async function loadHistory() {
+  const countEl = document.getElementById("history-count");
+  const listEl = document.getElementById("history-list");
+  if (!listEl) return;
+
+  try {
+    const res = await fetch("http://127.0.0.1:8000/api/history");
+    if (!res.ok) throw new Error("API error");
+    const data = await res.json();
+    const entries = data.entries || [];
+    countEl.textContent = `(${entries.length})`;
+
+    if (entries.length === 0) {
+      listEl.innerHTML = '<div style="font-size: 11px; color: #c8c3b4; margin-top: 6px;">No prompt history yet.</div>';
+      return;
+    }
+
+    listEl.innerHTML = "";
+    entries.slice(0, 5).forEach((entry, idx) => {
+      const card = document.createElement("div");
+      card.className = "history-card";
+      const stats = entry.stats || {};
+      const suppressionPct = Math.round((stats.suppressionRate || 0) * 100);
+
+      card.innerHTML = `
+        <div class="history-head">
+          <span class="badge-label">${entry.label}</span>
+          <span class="badge">${entry.goalLabel || entry.goal}</span>
+        </div>
+        <div class="history-prompt">“${entry.prompt || '(Default profile)'}”</div>
+        <div class="history-head">
+          <div class="history-stats">
+            <span>Keep: <strong style="color:#5eead4">${stats.shown ?? 0}</strong></span>
+            <span>Hide: <strong style="color:#fb7185">${stats.hidden ?? 0}</strong></span>
+            <span>Score: <strong style="color:#e8c36a">${stats.avgScore ?? 0}</strong></span>
+          </div>
+          <button type="button" class="replay-btn" data-idx="${idx}">Replay</button>
+        </div>
+      `;
+
+      card.querySelector(".replay-btn").addEventListener("click", async () => {
+        goalEl.value = entry.goal;
+        promptEl.value = entry.prompt || "";
+        goal = entry.goal;
+        prompt = entry.prompt || "";
+
+        await chrome.storage.local.set({ goal, prompt, mode });
+
+        try {
+          await fetch("http://127.0.0.1:8000/api/intent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ goal, prompt }),
+          });
+        } catch (e) {
+          console.warn("Intent update warning", e);
+        }
+
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (activeTab?.id) {
+          chrome.tabs.sendMessage(activeTab.id, { type: "ORION_RESCORE", goal, prompt, mode }).catch(() => {});
+        }
+
+        window.close();
+      });
+
+      listEl.appendChild(card);
+    });
+  } catch (err) {
+    countEl.textContent = "(0)";
+    listEl.innerHTML = '<div style="font-size: 11px; color: #c8c3b4; margin-top: 6px;">Start FastAPI backend to load history.</div>';
+  }
+}
+
+loadHistory();
+
