@@ -1,16 +1,19 @@
-/* Dim mode: faded, desaturated, non-interactive — content still visible. */
-.orion-hidden {
-  opacity: 0.22 !important;
-  filter: grayscale(1);
-  pointer-events: none;
-}
+/* ORION — conceal styles */
 
-/* Collapse mode: fully removed from layout. */
-.orion-hidden[hidden] {
+/* REMOVE mode (default): post disappears entirely from the feed. */
+.orion-remove {
   display: none !important;
 }
 
-/* Score badge on every judged post. */
+/* DIM mode: softened, desaturated, non-interactive but still visible. */
+.orion-dim {
+  opacity: 0.22 !important;
+  filter: grayscale(1) brightness(1.05);
+  pointer-events: none;
+  transition: opacity 0.35s ease, filter 0.35s ease;
+}
+
+/* Score badge on judged posts. */
 .orion-badge {
   position: absolute;
   top: 8px;
@@ -21,6 +24,7 @@
   padding: 3px 8px;
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  user-select: none;
 }
 
 .orion-good {
@@ -36,4 +40,13 @@
 .orion-bad {
   background: #fb7185;
   color: #3a0c14;
+}
+
+/* Degraded fallback: X markup changed or worker failed — never mass-hide. */
+html[data-orion-degraded="1"] .orion-remove,
+html[data-orion-degraded="1"] .orion-dim {
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: auto !important;
+  display: block !important;
 }

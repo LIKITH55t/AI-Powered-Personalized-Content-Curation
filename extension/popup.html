@@ -3,57 +3,194 @@
   <head>
     <meta charset="UTF-8" />
     <style>
+      *, *::before, *::after { box-sizing: border-box; }
       body {
         margin: 0;
-        width: 320px;
-        font-family: system-ui, sans-serif;
-        background: #07080f;
+        width: 340px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+        background: #0b0d14;
         color: #f4f1ea;
       }
-      .wrap { padding: 16px; }
-      .brand { letter-spacing: 0.2em; color: #e8c36a; font-size: 12px; font-weight: 700; }
-      textarea {
-        width: 100%;
-        box-sizing: border-box;
-        min-height: 90px;
-        margin-top: 10px;
+      .wrap { padding: 18px 16px 14px; }
+
+      /* ── header ── */
+      .head { display: flex; align-items: center; justify-content: space-between; }
+      .brand {
+        letter-spacing: 0.22em;
+        color: #e8c36a;
+        font-size: 13px;
+        font-weight: 800;
+      }
+      .brand small {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        font-weight: 400;
+        color: #7a7668;
+        margin-top: 1px;
+      }
+
+      /* ── toggle switch ── */
+      .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+      .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+      .slider {
+        position: absolute; inset: 0; border-radius: 999px;
+        background: #24263a; cursor: pointer;
+        transition: background 0.2s ease, box-shadow 0.2s ease;
+      }
+      .slider::before {
+        content: ""; position: absolute; width: 18px; height: 18px;
+        border-radius: 50%; background: #f4f1ea; top: 3px; left: 3px;
+        transition: transform 0.2s ease, background 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      }
+      .switch input:checked + .slider { background: #2dd4a8; }
+      .switch input:checked + .slider::before { transform: translateX(18px); background: #fff; }
+      .switch input:focus-visible + .slider { outline: 2px solid #5eead4; outline-offset: 2px; }
+
+      /* ── site status ── */
+      .site { font-size: 11px; color: #6b6f82; margin-top: 6px; min-height: 16px; }
+      .site.ok { color: #5eead4; }
+      .site.warn { color: #e8c36a; }
+      .site.err { color: #fb7185; }
+
+      /* ── stats grid ── */
+      .stats {
+        display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px;
+        margin-top: 12px;
+      }
+      .stats div {
+        background: #10121c; border-radius: 10px; padding: 8px 4px;
+        text-align: center; border: 1px solid #ffffff12;
+        transition: border-color 0.15s ease;
+      }
+      .stats div:hover { border-color: #ffffff25; }
+      .stats .n { font-weight: 800; font-size: 18px; display: block; line-height: 1.1; }
+      .stats .l {
+        font-size: 9px; color: #6b6f82; text-transform: uppercase;
+        letter-spacing: 0.06em; margin-top: 2px; display: block;
+      }
+
+      /* ── intent section ── */
+      details {
+        margin-top: 12px;
+        border: 1px solid #ffffff1f;
         border-radius: 12px;
-        border: 1px solid #ffffff22;
         background: #10121c;
-        color: inherit;
-        padding: 10px;
+        overflow: hidden;
+        transition: border-color 0.15s ease;
       }
-      select, button {
-        width: 100%;
-        margin-top: 8px;
-        border-radius: 999px;
-        padding: 10px;
-        border: 0;
+      details[open] { border-color: #ffffff2f; }
+      summary {
+        font-size: 13px; font-weight: 700; cursor: pointer;
+        color: #c8c3b4; padding: 10px 12px;
+        list-style: none;
+        display: flex; align-items: center; gap: 6px;
+        transition: color 0.12s ease, background 0.12s ease;
+        border-radius: 12px;
       }
-      button { background: #e8c36a; font-weight: 700; cursor: pointer; }
-      .modes { display: flex; gap: 8px; margin-top: 8px; }
-      .modes .mode { margin-top: 0; background: #10121c; border: 1px solid #ffffff22; color: #f4f1ea; }
-      .modes       .mode.active { background: #5eead4; color: #062e26; }
-      .status { font-size: 11px; color: #5eead4; margin-top: 10px; }
-      .hint { font-size: 11px; color: #c8c3b4; margin-top: 6px; }
+      summary::-webkit-details-marker { display: none; }
+      summary::before {
+        content: "▸"; font-size: 11px; transition: transform 0.15s ease;
+        display: inline-block; color: #6b6f82;
+      }
+      details[open] summary::before { transform: rotate(90deg); }
+      summary:hover { color: #f4f1ea; background: #ffffff08; }
+      summary:focus-visible { outline: 2px solid #5eead4; outline-offset: -2px; border-radius: 10px; }
+      .intent-body { padding: 0 12px 12px; }
+
+      select, textarea {
+        width: 100%; margin-top: 8px;
+        border-radius: 10px; border: 1px solid #ffffff22;
+        background: #0b0d14; color: inherit; padding: 9px 10px;
+        font: inherit; font-size: 13px;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      }
+      select:hover, textarea:hover { border-color: #ffffff44; }
+      select:focus, textarea:focus {
+        outline: none; border-color: #e8c36a;
+        box-shadow: 0 0 0 2px #e8c36a22;
+      }
+      textarea { min-height: 72px; resize: vertical; line-height: 1.5; }
+      select { cursor: pointer; appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6f82' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        background-repeat: no-repeat; background-position: right 10px center;
+        padding-right: 28px;
+      }
+
+      .modes { display: flex; gap: 8px; margin-top: 10px; }
+      .modes button {
+        flex: 1; border-radius: 999px; padding: 8px 0; border: 1px solid #ffffff22;
+        background: transparent; color: #c8c3b4; font-weight: 700;
+        cursor: pointer; font-size: 12px;
+        transition: all 0.15s ease;
+      }
+      .modes button:hover { border-color: #ffffff55; color: #f4f1ea; background: #ffffff08; }
+      .modes button:active { transform: scale(0.97); }
+      .modes button:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+      .modes button.active {
+        background: #2dd4a8; color: #062e26; border-color: transparent;
+        box-shadow: 0 0 12px #2dd4a833;
+      }
+
+      /* ── footer ── */
+      .footer { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 14px; }
+      .open {
+        font-size: 12px; color: #e8c36a; text-decoration: none;
+        padding: 4px 0; border-radius: 4px;
+        transition: color 0.12s ease;
+      }
+      .open:hover { color: #f0d78c; text-decoration: underline; text-underline-offset: 2px; }
+      .open:focus-visible { outline: 2px solid #5eead4; outline-offset: 2px; }
+      .hint { font-size: 10px; color: #4a4d5e; }
+
+      /* ── loading spinner ── */
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .spinner {
+        display: inline-block; width: 12px; height: 12px;
+        border: 2px solid #ffffff22; border-top-color: #5eead4;
+        border-radius: 50%; animation: spin 0.6s linear infinite;
+        vertical-align: middle; margin-right: 5px;
+      }
     </style>
   </head>
   <body>
     <div class="wrap">
-      <div class="brand">ORION</div>
-      <select id="goal">
-        <option value="placements">Placements</option>
-        <option value="exams">Competitive Exams</option>
-        <option value="skills">Skill Learning</option>
-      </select>
-      <textarea id="prompt">Show DSA and interview prep. Hide memes and celebrity posts.</textarea>
-      <div class="modes" id="modes">
-        <button type="button" class="mode" data-mode="dim">Dim</button>
-        <button type="button" class="mode" data-mode="collapse">Collapse</button>
+      <div class="head">
+        <span class="brand">ORION<small>Intent Feed Filter</small></span>
+        <label class="switch" title="Enable / pause filtering">
+          <input type="checkbox" id="enabled" />
+          <span class="slider"></span>
+        </label>
       </div>
-      <button id="save">Apply intent</button>
-      <div class="status" id="status">Checking active tab…</div>
-      <div class="hint">Scores live X (Twitter) tweets and demo posts against the FastAPI engine.</div>
+      <div class="site" id="site"><span class="spinner"></span>Checking tab…</div>
+
+      <div class="stats" id="stats" hidden>
+        <div><span class="n" id="sVisible">–</span><span class="l">Kept</span></div>
+        <div><span class="n" id="sRemoved">–</span><span class="l">Removed</span></div>
+        <div><span class="n" id="sDimmed">–</span><span class="l">Dimmed</span></div>
+      </div>
+
+      <details id="intent" open>
+        <summary>Intent</summary>
+        <div class="intent-body">
+          <select id="goal">
+            <option value="placements">💼 Placements</option>
+            <option value="exams">📚 Competitive Exams</option>
+            <option value="skills">🧠 Skill Learning</option>
+          </select>
+          <textarea id="prompt" placeholder="Describe what you want to see…"></textarea>
+          <div class="modes" id="modes">
+            <button type="button" class="active" data-mode="remove">✕ Remove</button>
+            <button type="button" data-mode="dim">◐ Dim</button>
+          </div>
+        </div>
+      </details>
+
+      <div class="footer">
+        <a class="open" href="#" id="openOptions">Settings & blocklists →</a>
+        <div class="hint" id="health"></div>
+      </div>
     </div>
     <script src="popup.js"></script>
   </body>
